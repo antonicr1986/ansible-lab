@@ -1,0 +1,16 @@
+- name: Instalar nginx y curl
+  apt:
+    name: [nginx, curl]
+    state: present
+    update_cache: true
+
+- name: Página de bienvenida personalizada
+  copy:
+    dest: /var/www/html/index.html
+    content: "Hola desde {{ inventory_hostname }}. {{ mensaje }}\n"
+  notify: Recargar nginx
+
+- name: Arrancar nginx
+  command: nginx
+  args:
+    creates: /run/nginx.pid

@@ -1,0 +1,12 @@
+- hosts: localhost
+  connection: local
+  tasks:
+    - name: Crear carpeta de prueba
+      file:
+        path: ~/ansible-lab/demo
+        state: directory
+
+    - name: Escribir un fichero
+      copy:
+        dest: ~/ansible-lab/demo/saludo.txt
+        content: "Hola desde Ansible\n"
