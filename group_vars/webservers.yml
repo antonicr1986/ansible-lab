@@ -1,6 +1,7 @@
+---
 ansible_connection: community.docker.docker
 ansible_python_interpreter: /usr/local/bin/python3.12
-mensaje: "Mensaje del grupo webservers"
+nginx_mensaje: "Mensaje del grupo webservers"
 app_token: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           36666335623637346532356134343066396133633438616434336436306238316438383435656437

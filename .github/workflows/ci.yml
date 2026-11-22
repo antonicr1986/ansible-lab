@@ -1,0 +1,71 @@
+---
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Instalar herramientas
+        run: pip install ansible ansible-lint yamllint
+
+      - name: Contraseña del vault
+        run: echo "$VAULT_PASS" > .vault_pass
+        env:
+          VAULT_PASS: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+
+      - name: yamllint
+        run: yamllint .
+
+      - name: ansible-lint
+        run: ansible-lint
+
+  deploy-test:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Instalar Ansible
+        run: pip install ansible
+
+      - name: Contraseña del vault
+        run: echo "$VAULT_PASS" > .vault_pass
+        env:
+          VAULT_PASS: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+
+      - name: Levantar servidores de prueba
+        run: |
+          docker run -d --name web1 python:3.12-slim sleep infinity
+          docker run -d --name web2 python:3.12-slim sleep infinity
+
+      - name: Primera ejecución
+        run: ansible-playbook site.yml
+
+      - name: Comprobar idempotencia
+        run: |
+          set -o pipefail
+          ansible-playbook site.yml | tee second_run.log
+          if grep -qE 'changed=[1-9]' second_run.log; then
+            echo "El playbook no es idempotente"
+            exit 1
+          fi
+
+      - name: Comprobar que nginx responde
+        run: |
+          docker exec web1 curl -s localhost | grep "Hola desde web1"
+          docker exec web2 curl -s localhost | grep "Hola desde web2"

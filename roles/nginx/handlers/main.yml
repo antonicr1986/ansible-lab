@@ -1,2 +1,4 @@
+---
 - name: Recargar nginx
-  command: nginx -s reload
+  ansible.builtin.command: nginx -s reload
+  changed_when: true

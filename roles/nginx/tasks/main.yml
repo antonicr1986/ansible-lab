@@ -1,3 +1,4 @@
+---
 - name: Instalar nginx y curl
   ansible.builtin.apt:
     name: [nginx, curl]
@@ -13,14 +14,15 @@
 
 - name: Arrancar nginx si no está corriendo
   ansible.builtin.shell: |
-    if [ -f /run/nginx.pid ] && kill -0 "$(cat /run/nginx.pid)" 2>/dev/null; then
+    pid_file=/run/nginx.pid
+    if [ -f "$pid_file" ] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
       echo running
     else
       nginx && echo started
     fi
   register: nginx_start
   changed_when: "'started' in nginx_start.stdout"
-  
+
 - name: Guardar token de la aplicación
   ansible.builtin.copy:
     content: "{{ app_token }}\n"

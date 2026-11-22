@@ -1,1 +1,2 @@
-mensaje: "Versión 2, desplegada con Ansible"
+---
+nginx_mensaje: "Versión 2, desplegada con Ansible"

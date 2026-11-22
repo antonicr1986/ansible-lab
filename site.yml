@@ -1,3 +1,5 @@
-- hosts: webservers
+---
+- name: Desplegar servidores web
+  hosts: webservers
   roles:
     - nginx

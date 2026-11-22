@@ -1,1 +1,2 @@
-mensaje: "Soy el servidor de staging"
+---
+nginx_mensaje: "Soy el servidor de staging"
