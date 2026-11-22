@@ -1,0 +1,26 @@
+---
+- name: Instalar paquetes base
+  ansible.builtin.apt:
+    name: "{{ common_paquetes }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Configurar zona horaria
+  ansible.builtin.file:
+    src: "/usr/share/zoneinfo/{{ common_zona_horaria }}"
+    dest: /etc/localtime
+    state: link
+    force: true
+
+- name: Guardar zona horaria en /etc/timezone
+  ansible.builtin.copy:
+    content: "{{ common_zona_horaria }}\n"
+    dest: /etc/timezone
+    mode: "0644"
+
+- name: Crear usuario de despliegue
+  ansible.builtin.user:
+    name: "{{ common_usuario }}"
+    shell: /bin/bash
+    create_home: true

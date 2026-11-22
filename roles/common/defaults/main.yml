@@ -1,0 +1,7 @@
+---
+common_paquetes:
+  - procps
+  - vim-tiny
+  - tzdata
+common_zona_horaria: Europe/Madrid
+common_usuario: deploy
