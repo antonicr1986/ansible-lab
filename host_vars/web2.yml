@@ -1,2 +1,3 @@
 ---
 nginx_mensaje: "Soy el servidor de staging"
+common_entorno: staging

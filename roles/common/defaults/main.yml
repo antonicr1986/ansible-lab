@@ -3,5 +3,13 @@ common_paquetes:
   - procps
   - vim-tiny
   - tzdata
+common_paquetes_debug:
+  - less
+  - iputils-ping
+common_entorno: produccion
 common_zona_horaria: Europe/Madrid
-common_usuario: deploy
+common_usuarios:
+  - nombre: deploy
+    shell: /bin/bash
+  - nombre: monitor
+    shell: /usr/sbin/nologin

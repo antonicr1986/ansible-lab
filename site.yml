@@ -2,5 +2,7 @@
 - name: Desplegar servidores web
   hosts: webservers
   roles:
-    - common
-    - nginx
+    - role: common
+      tags: [common]
+    - role: nginx
+      tags: [nginx]

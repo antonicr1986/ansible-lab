@@ -1,10 +1,25 @@
 ---
+- name: Comprobar que el sistema es compatible
+  ansible.builtin.assert:
+    that: ansible_facts['os_family'] == 'Debian'
+    fail_msg: "Este rol solo soporta sistemas de la familia Debian"
+    quiet: true
+  tags: [always]
+
 - name: Instalar paquetes base
   ansible.builtin.apt:
     name: "{{ common_paquetes }}"
     state: present
     update_cache: true
     cache_valid_time: 3600
+  tags: [paquetes]
+
+- name: Instalar herramientas de depuración (solo staging)
+  ansible.builtin.apt:
+    name: "{{ common_paquetes_debug }}"
+    state: present
+  when: common_entorno == 'staging'
+  tags: [paquetes]
 
 - name: Configurar zona horaria
   ansible.builtin.file:
@@ -12,15 +27,21 @@
     dest: /etc/localtime
     state: link
     force: true
+  tags: [zona_horaria]
 
 - name: Guardar zona horaria en /etc/timezone
   ansible.builtin.copy:
     content: "{{ common_zona_horaria }}\n"
     dest: /etc/timezone
     mode: "0644"
+  tags: [zona_horaria]
 
-- name: Crear usuario de despliegue
+- name: Crear usuarios
   ansible.builtin.user:
-    name: "{{ common_usuario }}"
-    shell: /bin/bash
+    name: "{{ item.nombre }}"
+    shell: "{{ item.shell }}"
     create_home: true
+  loop: "{{ common_usuarios }}"
+  loop_control:
+    label: "{{ item.nombre }}"
+  tags: [usuarios]
