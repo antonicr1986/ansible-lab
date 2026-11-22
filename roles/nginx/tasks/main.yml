@@ -20,3 +20,10 @@
     fi
   register: nginx_start
   changed_when: "'started' in nginx_start.stdout"
+  
+- name: Guardar token de la aplicación
+  ansible.builtin.copy:
+    content: "{{ app_token }}\n"
+    dest: /etc/nginx/app_token
+    mode: "0600"
+  no_log: true
