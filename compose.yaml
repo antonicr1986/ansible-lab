@@ -1,0 +1,10 @@
+---
+services:
+  web1:
+    image: python:3.12-slim
+    container_name: web1
+    command: sleep infinity
+  web2:
+    image: python:3.12-slim
+    container_name: web2
+    command: sleep infinity

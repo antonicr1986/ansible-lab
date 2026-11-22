@@ -17,18 +17,17 @@ jobs:
           python-version: "3.13"
 
       - name: Instalar herramientas
-        run: pip install ansible ansible-lint yamllint
+        run: |
+          pip install ansible-core ansible-lint yamllint
+          ansible-galaxy collection install -r requirements.yml
 
       - name: Contraseña del vault
         run: echo "$VAULT_PASS" > .vault_pass
         env:
           VAULT_PASS: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
 
-      - name: yamllint
-        run: yamllint .
-
-      - name: ansible-lint
-        run: ansible-lint
+      - name: Lint
+        run: make lint
 
   deploy-test:
     needs: lint
@@ -40,8 +39,10 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Instalar Ansible
-        run: pip install ansible
+      - name: Instalar Ansible y colecciones
+        run: |
+          pip install ansible-core
+          make deps
 
       - name: Contraseña del vault
         run: echo "$VAULT_PASS" > .vault_pass
@@ -49,12 +50,10 @@ jobs:
           VAULT_PASS: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
 
       - name: Levantar servidores de prueba
-        run: |
-          docker run -d --name web1 python:3.12-slim sleep infinity
-          docker run -d --name web2 python:3.12-slim sleep infinity
+        run: make up
 
       - name: Primera ejecución
-        run: ansible-playbook site.yml
+        run: make deploy
 
       - name: Comprobar idempotencia
         run: |
