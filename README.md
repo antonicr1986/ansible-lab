@@ -16,7 +16,12 @@ Hands-on **configuration management** lab with Ansible. An `nginx` role is deplo
 - **Inventory** with two hosts (`web1`, `web2`) using the Docker connection plugin, no SSH needed
 - **`ansible.cfg`** with project defaults (inventory, roles path, YAML output, vault password file)
 - **Variables and precedence**: role `defaults` → `group_vars` → `host_vars` → `-e`
-- **Reusable `nginx` role**: installs nginx, renders the welcome page from a **Jinja2 template** using facts and makes sure nginx is running
+- **Two roles** applied in order:
+  - `common`: base packages, timezone and users
+  - `nginx`: installs nginx, renders the welcome page from a **Jinja2 template** using facts and makes sure nginx is running
+- **Loops**: users created from a list (`loop` + `loop_control`)
+- **Conditionals**: debug tools installed only on the staging host (`when`), and an `assert` that checks the OS family with facts
+- **Tags**: run only part of the playbook (`--tags usuarios`, `--skip-tags nginx`)
 - **Handlers**: nginx is reloaded only when the page actually changes
 - **Ansible Vault**: an encrypted secret (`app_token`) stored in the repo and deployed with `no_log: true` and `0600` permissions
 - **Idempotency**: a second run reports `changed=0` (checked automatically in CI)
@@ -27,7 +32,7 @@ Hands-on **configuration management** lab with Ansible. An `nginx` role is deplo
 | Job | What it does |
 |---|---|
 | `lint` | Runs `yamllint` and `ansible-lint` |
-| `deploy-test` | Starts `web1` and `web2`, runs the playbook twice, fails if the second run is not idempotent and checks nginx responds on both hosts |
+| `deploy-test` | Installs `ansible-core` + collections from `requirements.yml`, starts `web1` and `web2` with Docker Compose, runs the playbook twice, fails if the second run is not idempotent and checks nginx responds on both hosts |
 
 The vault password is provided to the pipeline as the `ANSIBLE_VAULT_PASSWORD` repository secret.
 
@@ -38,13 +43,19 @@ ansible-lab/
 ├── .github/workflows/ci.yml   # CI pipeline
 ├── ansible.cfg                # project settings
 ├── .yamllint                  # yamllint rules (compatible with ansible-lint)
+├── requirements.yml           # required collections
+├── compose.yaml               # test servers (web1, web2)
+├── Makefile                   # shortcuts: deps, up, deploy, lint, down
 ├── inventory.ini              # hosts
-├── site.yml                   # main playbook
+├── site.yml                   # main playbook (common + nginx)
 ├── group_vars/
 │   └── webservers.yml         # connection vars, group message and vaulted secret
 ├── host_vars/
-│   └── web2.yml               # per-host override
+│   └── web2.yml               # per-host override (staging)
 ├── roles/
+│   ├── common/
+│   │   ├── defaults/main.yml  # packages, timezone, users
+│   │   └── tasks/main.yml     # assert · packages · timezone · users
 │   └── nginx/
 │       ├── defaults/main.yml  # default variables
 │       ├── tasks/main.yml     # install · template · start · secret
@@ -58,6 +69,7 @@ ansible-lab/
 
 - Linux or WSL (Ubuntu) with Ansible (`pipx install --include-deps ansible`)
 - Docker (Docker Desktop with WSL integration enabled)
+- `make`
 
 ### Run it
 
@@ -71,11 +83,9 @@ ansible-vault encrypt_string 'your-token' --name 'app_token'
 Then:
 
 ```bash
-docker run -d --name web1 python:3.12-slim sleep infinity
-docker run -d --name web2 python:3.12-slim sleep infinity
-
-ansible webservers -m ping
-ansible-playbook site.yml
+make deps     # install collections
+make up       # start web1 and web2
+make deploy   # run the playbook
 
 docker exec web1 curl -s localhost
 docker exec web2 curl -s localhost
@@ -92,17 +102,24 @@ Sistema: Debian 13.x
 
 `web1` takes its message from `group_vars` and `web2` from `host_vars`, which has higher precedence.
 
+Run only part of the playbook with tags:
+
+```bash
+ansible-playbook site.yml --list-tags
+ansible-playbook site.yml --tags usuarios
+ansible-playbook site.yml --skip-tags nginx
+```
+
 ### Lint
 
 ```bash
-yamllint .
-ansible-lint
+make lint
 ```
 
 ### Clean up
 
 ```bash
-docker rm -f web1 web2
+make down
 ```
 
 </details>
@@ -121,7 +138,12 @@ Laboratorio práctico de **gestión de configuración** con Ansible. Se desplieg
 - **Inventario** con dos hosts (`web1`, `web2`) usando el plugin de conexión Docker, sin necesidad de SSH
 - **`ansible.cfg`** con la configuración del proyecto (inventario, ruta de roles, salida en YAML, fichero de contraseña del vault)
 - **Variables y prioridad**: `defaults` del rol → `group_vars` → `host_vars` → `-e`
-- **Rol `nginx` reutilizable**: instala nginx, genera la página de bienvenida con una **plantilla Jinja2** que usa facts y se asegura de que nginx esté en marcha
+- **Dos roles** aplicados en orden:
+  - `common`: paquetes base, zona horaria y usuarios
+  - `nginx`: instala nginx, genera la página de bienvenida con una **plantilla Jinja2** que usa facts y se asegura de que nginx esté en marcha
+- **Bucles**: usuarios creados a partir de una lista (`loop` + `loop_control`)
+- **Condicionales**: herramientas de depuración solo en el servidor de staging (`when`) y un `assert` que comprueba la familia del sistema con facts
+- **Tags**: ejecutar solo una parte del playbook (`--tags usuarios`, `--skip-tags nginx`)
 - **Handlers**: nginx solo se recarga cuando la página cambia de verdad
 - **Ansible Vault**: un secreto cifrado (`app_token`) guardado en el repo y desplegado con `no_log: true` y permisos `0600`
 - **Idempotencia**: una segunda ejecución da `changed=0` (se comprueba automáticamente en el CI)
@@ -132,7 +154,7 @@ Laboratorio práctico de **gestión de configuración** con Ansible. Se desplieg
 | Job | Qué hace |
 |---|---|
 | `lint` | Ejecuta `yamllint` y `ansible-lint` |
-| `deploy-test` | Levanta `web1` y `web2`, ejecuta el playbook dos veces, falla si la segunda ejecución no es idempotente y comprueba que nginx responde en los dos hosts |
+| `deploy-test` | Instala `ansible-core` + las colecciones de `requirements.yml`, levanta `web1` y `web2` con Docker Compose, ejecuta el playbook dos veces, falla si la segunda ejecución no es idempotente y comprueba que nginx responde en los dos hosts |
 
 La contraseña del vault llega al pipeline mediante el secret del repositorio `ANSIBLE_VAULT_PASSWORD`.
 
@@ -143,13 +165,19 @@ ansible-lab/
 ├── .github/workflows/ci.yml   # pipeline de CI
 ├── ansible.cfg                # configuración del proyecto
 ├── .yamllint                  # reglas de yamllint (compatibles con ansible-lint)
+├── requirements.yml           # colecciones necesarias
+├── compose.yaml               # servidores de prueba (web1, web2)
+├── Makefile                   # atajos: deps, up, deploy, lint, down
 ├── inventory.ini              # hosts
-├── site.yml                   # playbook principal
+├── site.yml                   # playbook principal (common + nginx)
 ├── group_vars/
 │   └── webservers.yml         # conexión, mensaje del grupo y secreto cifrado
 ├── host_vars/
-│   └── web2.yml               # variables propias de web2
+│   └── web2.yml               # variables propias de web2 (staging)
 ├── roles/
+│   ├── common/
+│   │   ├── defaults/main.yml  # paquetes, zona horaria, usuarios
+│   │   └── tasks/main.yml     # assert · paquetes · zona horaria · usuarios
 │   └── nginx/
 │       ├── defaults/main.yml  # variables por defecto
 │       ├── tasks/main.yml     # instalar · plantilla · arrancar · secreto
@@ -163,6 +191,7 @@ ansible-lab/
 
 - Linux o WSL (Ubuntu) con Ansible (`pipx install --include-deps ansible`)
 - Docker (Docker Desktop con la integración WSL activada)
+- `make`
 
 ### Cómo ejecutarlo
 
@@ -176,11 +205,9 @@ ansible-vault encrypt_string 'tu-token' --name 'app_token'
 Después:
 
 ```bash
-docker run -d --name web1 python:3.12-slim sleep infinity
-docker run -d --name web2 python:3.12-slim sleep infinity
-
-ansible webservers -m ping
-ansible-playbook site.yml
+make deps     # instala las colecciones
+make up       # levanta web1 y web2
+make deploy   # ejecuta el playbook
 
 docker exec web1 curl -s localhost
 docker exec web2 curl -s localhost
@@ -197,17 +224,24 @@ Sistema: Debian 13.x
 
 `web1` toma el mensaje de `group_vars` y `web2` de `host_vars`, que tiene más prioridad.
 
+Ejecutar solo una parte del playbook con tags:
+
+```bash
+ansible-playbook site.yml --list-tags
+ansible-playbook site.yml --tags usuarios
+ansible-playbook site.yml --skip-tags nginx
+```
+
 ### Lint
 
 ```bash
-yamllint .
-ansible-lint
+make lint
 ```
 
 ### Limpiar
 
 ```bash
-docker rm -f web1 web2
+make down
 ```
 
 </details>
